@@ -1,8 +1,44 @@
+// parametric Multiboard in OpenSCAD
+// -----------------------------------------------------------------------------
+// for Multiboard created by KeepMaking
+// more info at https://www.multiboard.io/
+// and https://thangs.com/designer/Keep%20Making/3d-model/8x8%20Multiboard%20Core%20Tile-974214
+//
+// a huge thanks for creating this wonderful system!
+// -----------------------------------------------------------------------------
+// Original scad file by Victor Zag
+// https://www.printables.com/model/762596-multiboard-parametric/files
+// https://github.com/shaggyone/multiboard-parametric
+// -----------------------------------------------------------------------------
+// modified by Uno:
+// * added option to create multiple tiles with a separation layer of specified size
+// * added option to alternate tile material each tile
+// * options to render even-numbered tiles, odd-numbered tiles and separation layer
+// * added render() so preview will not be sluggish at a certain tile size
+//   takes some time initally, but will prevent unresponsive OpenSCAD when preview is
+//   moved
+//
+// This modification needs a recent OpenSCAD with the `lazy-union` option to export 
+// a 3MF with different colors for different parts.
+//
+// as alternative one can export all 3 parts as 3 step files or 3 MFs by changing 
+// the render_... variables and export each separate
+
+
 x_cells = 8;
 y_cells = 6;
 type = "core"; // side or corner
+// for printing with material changes, e.g. PLA and PETG:
+// either set a separation layer of one or more layer heights
+// or let the material alternate each tile, wit or without separation layer
+alternate_tile_material=true; // alternate material for each tile
+stack_separation_layer_thickness=0.6; // thickness of separation layer between two tiles, 0 to disable
 
-// eps = 0.01;
+render_odd_tiles=true; // render odd tiles 
+render_even_tiles=true; // render even tiles
+render_separation_layer=true; // render the separation layer
+
+stack_size=2; // how many tiles
 
 // Main dimensions
 cell_size = 25;
@@ -338,15 +374,110 @@ module trapz_thread(d1, d2, h1, h2, thread_len, pitch) {
     );
 }
 
-
+if (stack_size == 1)
+{
 if (type == "core") {
-    multiboard_core(x_cells, y_cells);
+    render()multiboard_core(x_cells, y_cells);
 }
 
 if (type == "side") {
-    multiboard_side(x_cells, y_cells);
+    render()multiboard_side(x_cells, y_cells);
 }
 
 if (type == "corner") {
-    multiboard_corner(x_cells, y_cells);
+    render()multiboard_corner(x_cells, y_cells);
+}
+}
+offset_ = stack_separation_layer_thickness;
+if (stack_size >1) 
+{
+    // the tiles itself
+    if (render_odd_tiles)
+    {
+        union()
+        {
+            for (i=[0:2:stack_size-1])
+            {
+                color_tile=alternate_tile_material && (i % 2 == 0)? "blue" :"red";
+
+                translate([0,0,i*(height + offset_)])
+                {
+                    if (type == "core") 
+                    {
+                    color(color_tile)render()multiboard_core(x_cells, y_cells);
+                }
+
+                if (type == "side") 
+                {
+                    color(color_tile)render()multiboard_side(x_cells, y_cells);
+                }
+
+                if (type == "corner") 
+                {
+                    color(color_tile)render()multiboard_corner(x_cells, y_cells);
+                }
+                
+                }
+            }
+        }
+    }
+    if (render_even_tiles)
+    {
+        union()
+        {
+            for (i=[1:2:stack_size-1])
+            {
+                color_tile=alternate_tile_material && (i % 2 == 0)? "blue" :"red";
+
+                translate([0,0,i*(height + offset_)])
+                {
+                    if (type == "core") 
+                    {
+                    color(color_tile)render()multiboard_core(x_cells, y_cells);
+                }
+
+                if (type == "side") 
+                {
+                    color(color_tile)render()multiboard_side(x_cells, y_cells);
+                }
+
+                if (type == "corner") 
+                {
+                    color(color_tile)render()multiboard_corner(x_cells, y_cells);
+                }
+                
+                }
+            }
+        }
+    }
+    // the separation layer if needed
+    if (render_separation_layer)
+    {
+        union()
+        {
+            for (i=[0:1:stack_size-2])
+            {
+                translate([0,0,i*(height + offset_)])
+                {
+                    if (type == "core") 
+                    {
+                        color("lime")translate([0,0,height])
+                        render()linear_extrude(offset_)projection(cut=true) multiboard_core(x_cells, y_cells);
+                    }
+
+                    if (type == "side") 
+                    {
+                        color("lime")translate([0,0,height])
+                        render()linear_extrude(offset_)projection(cut=true) multiboard_side(x_cells, y_cells);
+                    }
+
+                    if (type == "corner") 
+                    {
+                        color("lime")translate([0,0,height])
+                        render()linear_extrude(offset_)projection(cut=true) multiboard_corner(x_cells, y_cells);
+                    }
+                }
+            }
+        }
+    }
 }
